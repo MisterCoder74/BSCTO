@@ -1,0 +1,25 @@
+# Operating System files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# PHP
+.env
+*.log
+
+# Node (if ever used)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# IDE
+.phpstorm.meta.php
+_ide_helper.php
+
+# OS specific
+.AppleDouble
+.LSOverride

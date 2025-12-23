@@ -1,0 +1,86 @@
+[
+  {
+    "id": 1,
+    "name": "Alice Green",
+    "email": "alice@example.com",
+    "phone": "+1-555-0101",
+    "notes": "Prefers weekends",
+    "isVIP": true,
+    "isBadClient": false,
+    "appointments": [
+      { "appointmentId": 12, "status": "complete", "note": "On time" }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Sarah Johnson",
+    "email": "sarah.j@example.com",
+    "phone": "+1-555-0102",
+    "notes": "Sensitive scalp",
+    "isVIP": false,
+    "isBadClient": false,
+    "appointments": []
+  },
+  {
+    "id": 3,
+    "name": "Emma Davis",
+    "email": "emma.d@example.com",
+    "phone": "+1-555-0103",
+    "notes": "Regular customer",
+    "isVIP": true,
+    "isBadClient": false,
+    "appointments": [
+      { "appointmentId": 13, "status": "pending", "note": "" }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "Jessica Martinez",
+    "email": "jessica.m@example.com",
+    "phone": "+1-555-0104",
+    "notes": "Prefers morning slots",
+    "isVIP": false,
+    "isBadClient": false,
+    "appointments": []
+  },
+  {
+    "id": 5,
+    "name": "Michelle Brown",
+    "email": "michelle.b@example.com",
+    "phone": "+1-555-0105",
+    "notes": "New client",
+    "isVIP": false,
+    "isBadClient": false,
+    "appointments": []
+  },
+  {
+    "id": 6,
+    "name": "Lisa Anderson",
+    "email": "lisa.a@example.com",
+    "phone": "+1-555-0106",
+    "notes": "Frequent visitor",
+    "isVIP": true,
+    "isBadClient": false,
+    "appointments": []
+  },
+  {
+    "id": 7,
+    "name": "Jennifer Wilson",
+    "email": "jennifer.w@example.com",
+    "phone": "+1-555-0107",
+    "notes": "Referred by Alice",
+    "isVIP": false,
+    "isBadClient": false,
+    "appointments": []
+  },
+  {
+    "id": 8,
+    "name": "Victoria White",
+    "email": "victoria.w@example.com",
+    "phone": "+1-555-0108",
+    "notes": "Corporate account",
+    "isVIP": true,
+    "isBadClient": false,
+    "appointments": []
+  }
+]

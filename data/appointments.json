@@ -1,0 +1,65 @@
+[
+  {
+    "id": 12,
+    "clientId": 1,
+    "staffId": 1,
+    "serviceId": 1,
+    "date": "2024-12-23",
+    "time": "10:00",
+    "status": "complete"
+  },
+  {
+    "id": 13,
+    "clientId": 3,
+    "staffId": 2,
+    "serviceId": 2,
+    "date": "2024-12-24",
+    "time": "14:30",
+    "status": "pending"
+  },
+  {
+    "id": 14,
+    "clientId": 2,
+    "staffId": 3,
+    "serviceId": 4,
+    "date": "2024-12-25",
+    "time": "09:00",
+    "status": "pending"
+  },
+  {
+    "id": 15,
+    "clientId": 4,
+    "staffId": 1,
+    "serviceId": 5,
+    "date": "2024-12-26",
+    "time": "11:00",
+    "status": "pending"
+  },
+  {
+    "id": 16,
+    "clientId": 5,
+    "staffId": 2,
+    "serviceId": 3,
+    "date": "2024-12-27",
+    "time": "15:00",
+    "status": "pending"
+  },
+  {
+    "id": 17,
+    "clientId": 6,
+    "staffId": 4,
+    "serviceId": 1,
+    "date": "2024-12-28",
+    "time": "10:30",
+    "status": "pending"
+  },
+  {
+    "id": 18,
+    "clientId": 7,
+    "staffId": 5,
+    "serviceId": 5,
+    "date": "2024-12-29",
+    "time": "13:00",
+    "status": "pending"
+  }
+]
