@@ -1,0 +1,44 @@
+[
+  { 
+    "id": 1, 
+    "name": "Haircut", 
+    "duration": 30, 
+    "price": 35.0 
+  },
+  { 
+    "id": 2, 
+    "name": "Manicure", 
+    "duration": 45, 
+    "price": 25.0 
+  },
+  { 
+    "id": 3, 
+    "name": "Pedicure", 
+    "duration": 60, 
+    "price": 35.0 
+  },
+  { 
+    "id": 4, 
+    "name": "Hair Color", 
+    "duration": 90, 
+    "price": 65.0 
+  },
+  { 
+    "id": 5, 
+    "name": "Facial", 
+    "duration": 60, 
+    "price": 55.0 
+  },
+  { 
+    "id": 6, 
+    "name": "Blow Dry", 
+    "duration": 30, 
+    "price": 25.0 
+  },
+  { 
+    "id": 7, 
+    "name": "Brazilian Wax", 
+    "duration": 45, 
+    "price": 45.0 
+  }
+]

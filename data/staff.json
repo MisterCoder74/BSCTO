@@ -1,0 +1,32 @@
+[
+  { 
+    "id": 1, 
+    "name": "Maria Rossi", 
+    "role": "Stylist", 
+    "email": "maria@salon.com" 
+  },
+  { 
+    "id": 2, 
+    "name": "John Smith", 
+    "role": "Manicurist", 
+    "email": "john@salon.com" 
+  },
+  { 
+    "id": 3, 
+    "name": "Angela Patel", 
+    "role": "Colorist", 
+    "email": "angela@salon.com" 
+  },
+  { 
+    "id": 4, 
+    "name": "David Lee", 
+    "role": "Barber", 
+    "email": "david@salon.com" 
+  },
+  { 
+    "id": 5, 
+    "name": "Sophie Garcia", 
+    "role": "Esthetician", 
+    "email": "sophie@salon.com" 
+  }
+]
