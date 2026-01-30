@@ -448,3 +448,169 @@ header h1 {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* ===== Income Tab Styles ===== */
+.income-summary-card {
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.income-summary-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.income-summary-card .card-body {
+  padding: 1.5rem;
+}
+
+.income-summary-card.income-today {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-left: 4px solid #2196f3;
+}
+
+.income-summary-card.income-week {
+  background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+  border-left: 4px solid #9c27b0;
+}
+
+.income-summary-card.income-month {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left: 4px solid #4caf50;
+}
+
+.income-summary-card.income-alltime {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  border-left: 4px solid #ff9800;
+}
+
+.income-summary-card .card-title {
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.income-amount {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #212529;
+  margin-bottom: 0;
+}
+
+.income-today .income-amount {
+  color: #1976d2;
+}
+
+.income-week .income-amount {
+  color: #7b1fa2;
+}
+
+.income-month .income-amount {
+  color: #388e3c;
+}
+
+.income-alltime .income-amount {
+  color: #f57c00;
+}
+
+/* Income Table Styles */
+#incomeTable {
+  font-size: 0.95rem;
+}
+
+#incomeTable th {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+}
+
+#incomeTable td {
+  vertical-align: middle;
+}
+
+#incomeTable .income-amount-cell {
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+#incomeTable .payment-method-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.payment-cash {
+  background-color: #c8e6c9;
+  color: #2e7d32;
+}
+
+.payment-card {
+  background-color: #bbdefb;
+  color: #1976d2;
+}
+
+.payment-check {
+  background-color: #fff9c4;
+  color: #f57f17;
+}
+
+.payment-other {
+  background-color: #e0e0e0;
+  color: #616161;
+}
+
+/* Income Filter Card */
+#income-panel .card {
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+#income-panel .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  font-weight: 600;
+}
+
+/* Income Reports Tables */
+#incomeByStaffTable,
+#incomeByServiceTable {
+  font-size: 0.9rem;
+}
+
+#incomeByStaffTable td,
+#incomeByServiceTable td {
+  vertical-align: middle;
+}
+
+#incomeByStaffTable .staff-total,
+#incomeByServiceTable .service-total {
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+/* Responsive Income Table */
+@media (max-width: 768px) {
+  .income-summary-card .card-body {
+    padding: 1rem;
+  }
+  
+  .income-amount {
+    font-size: 1.25rem;
+  }
+  
+  #incomeTable {
+    font-size: 0.85rem;
+  }
+  
+  #incomeTable th,
+  #incomeTable td {
+    padding: 0.5rem;
+  }
+}
