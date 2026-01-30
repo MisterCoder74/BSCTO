@@ -9,7 +9,8 @@
  * 4. AJAX/fetch calls to PHP endpoints with cache busting using { cache: 'no-store' }
  * 5. Dynamic dropdown population from JSON data
  * 6. Appointment status management and email triggering
- * 7. Error handling and user feedback
+ * 7. Income/Finances tracking and management
+ * 8. Error handling and user feedback
  */
 
 // Global state for current calendar view
@@ -19,6 +20,8 @@ const allClients = [];
 const allStaff = [];
 const allServices = [];
 const allAppointments = [];
+const allIncomes = [];
+let incomeSummary = {};
 
 // Bootstrap modals (cached for performance)
 let clientModalInstance = null;
@@ -26,6 +29,7 @@ let staffModalInstance = null;
 let serviceModalInstance = null;
 let appointmentModalInstance = null;
 let dayViewModalInstance = null;
+let incomeModalInstance = null;
 
 /**
  * Initialize the application on page load
@@ -49,6 +53,7 @@ function initializeModals() {
   serviceModalInstance = new bootstrap.Modal(document.getElementById('serviceModal'));
   appointmentModalInstance = new bootstrap.Modal(document.getElementById('appointmentModal'));
   dayViewModalInstance = new bootstrap.Modal(document.getElementById('dayViewModal'));
+  incomeModalInstance = new bootstrap.Modal(document.getElementById('incomeModal'));
 }
 
 /**
@@ -224,6 +229,20 @@ function setupEventListeners() {
   document.getElementById('appointments-tab').addEventListener('shown.bs.tab', function() {
     loadAppointmentsData().then(() => renderCalendar());
   });
+  
+  document.getElementById('income-tab').addEventListener('shown.bs.tab', function() {
+    loadIncomes();
+    getIncomeSummary();
+  });
+  
+  // Income filter change listeners
+  document.getElementById('incomeFilterDateFrom').addEventListener('change', filterIncomes);
+  document.getElementById('incomeFilterDateTo').addEventListener('change', filterIncomes);
+  document.getElementById('incomeFilterStaff').addEventListener('change', filterIncomes);
+  document.getElementById('incomeFilterPayment').addEventListener('change', filterIncomes);
+  
+  // Income form submission
+  document.getElementById('incomeForm').addEventListener('submit', submitIncomeForm);
 }
 
 /**
@@ -885,10 +904,23 @@ async function submitAppointmentForm(e) {
     });
     const result = await response.json();
     if (result.success) {
-      showAlert(`Appointment ${action === 'add' ? 'created' : 'updated'} successfully! Email sent to client.`, 'success');
+      let message = `Appointment ${action === 'add' ? 'created' : 'updated'} successfully! Email sent to client.`;
+      if (result.incomeCreated) {
+        message += ' Income record created.';
+      }
+      if (result.incomeDeleted) {
+        message += ' Income record removed.';
+      }
+      showAlert(message, 'success');
       appointmentModalInstance.hide();
       dayViewModalInstance.hide();
       loadAppointmentsData().then(() => renderCalendar());
+      // If income tab is visible, reload incomes
+      const incomeTab = document.getElementById('income-panel');
+      if (incomeTab && incomeTab.classList.contains('active')) {
+        loadIncomes();
+        getIncomeSummary();
+      }
     } else {
       showAlert('Error: ' + result.error, 'danger');
     }
@@ -917,6 +949,12 @@ async function deleteAppointment(appointmentId) {
       showAlert('Appointment deleted! Notification sent to client.', 'success');
       loadAppointmentsData().then(() => renderCalendar());
       dayViewModalInstance.hide();
+      // Reload incomes if on income tab
+      const incomeTab = document.getElementById('income-panel');
+      if (incomeTab && incomeTab.classList.contains('active')) {
+        loadIncomes();
+        getIncomeSummary();
+      }
     } else {
       showAlert('Error: ' + result.error, 'danger');
     }
@@ -961,4 +999,339 @@ function showAlert(message, type = 'info') {
   setTimeout(() => {
     alertDiv.remove();
   }, 5000);
+}
+
+// ===== INCOME/FINANCES FUNCTIONS =====
+
+/**
+ * FETCH: Load all income records from /php/incomes.php
+ * Uses cache: 'no-store' to bypass browser caching
+ */
+async function loadIncomes() {
+  try {
+    const response = await fetch('/php/incomes.php?action=list', { 
+      cache: 'no-store' 
+    });
+    const result = await response.json();
+    if (result.success) {
+      allIncomes.length = 0;
+      allIncomes.push(...result.data);
+      populateIncomeStaffFilter();
+      renderIncomeTable(result.data);
+      document.getElementById('incomeRecordCount').textContent = `${result.data.length} records`;
+    } else {
+      showAlert('Error loading income records: ' + result.error, 'danger');
+    }
+  } catch (error) {
+    console.error('Error loading incomes:', error);
+    showAlert('Error loading income records: ' + error.message, 'danger');
+  }
+}
+
+/**
+ * FETCH: Get income summary data from /php/incomes.php?action=getSummary
+ * Updates the summary cards with totals
+ */
+async function getIncomeSummary() {
+  try {
+    const response = await fetch('/php/incomes.php?action=getSummary', { 
+      cache: 'no-store' 
+    });
+    const result = await response.json();
+    if (result.success) {
+      incomeSummary = result.data;
+      renderIncomeDashboard();
+      renderIncomeByStaff();
+      renderIncomeByService();
+    } else {
+      showAlert('Error loading income summary: ' + result.error, 'danger');
+    }
+  } catch (error) {
+    console.error('Error loading income summary:', error);
+    showAlert('Error loading income summary: ' + error.message, 'danger');
+  }
+}
+
+/**
+ * Render income summary cards with current totals
+ */
+function renderIncomeDashboard() {
+  document.getElementById('incomeTodayTotal').textContent = formatCurrency(incomeSummary.totalToday || 0);
+  document.getElementById('incomeWeekTotal').textContent = formatCurrency(incomeSummary.totalThisWeek || 0);
+  document.getElementById('incomeMonthTotal').textContent = formatCurrency(incomeSummary.totalThisMonth || 0);
+  document.getElementById('incomeAllTimeTotal').textContent = formatCurrency(incomeSummary.totalAllTime || 0);
+}
+
+/**
+ * Render income table with provided data
+ */
+function renderIncomeTable(incomes) {
+  const tbody = document.getElementById('incomeTableBody');
+  tbody.innerHTML = '';
+  
+  if (incomes.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No income records found</td></tr>';
+    return;
+  }
+  
+  incomes.forEach(income => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${formatDate(income.date)}</td>
+      <td>${income.time}</td>
+      <td><strong>${income.clientName}</strong></td>
+      <td>${income.staffName}</td>
+      <td>${income.serviceName}</td>
+      <td class="income-amount-cell">${formatCurrency(income.amount)}</td>
+      <td><span class="payment-method-badge ${getPaymentMethodBadgeClass(income.paymentMethod)}">${income.paymentMethod}</span></td>
+      <td><span class="badge badge-success">${income.status}</span></td>
+      <td>
+        <button class="btn btn-warning btn-sm btn-action" onclick="editIncome(${income.id})">Edit</button>
+        <button class="btn btn-danger btn-sm btn-action" onclick="deleteIncome(${income.id})">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+/**
+ * Filter incomes based on filter inputs
+ */
+async function filterIncomes() {
+  const dateFrom = document.getElementById('incomeFilterDateFrom').value;
+  const dateTo = document.getElementById('incomeFilterDateTo').value;
+  const staffName = document.getElementById('incomeFilterStaff').value;
+  const paymentMethod = document.getElementById('incomeFilterPayment').value;
+  
+  // Build query string
+  const params = new URLSearchParams();
+  params.append('action', 'list');
+  if (dateFrom) params.append('dateFrom', dateFrom);
+  if (dateTo) params.append('dateTo', dateTo);
+  if (paymentMethod) params.append('paymentMethod', paymentMethod);
+  
+  try {
+    const response = await fetch(`/php/incomes.php?${params.toString()}`, { 
+      cache: 'no-store' 
+    });
+    const result = await response.json();
+    if (result.success) {
+      let filteredData = result.data;
+      
+      // Filter by staff name (client-side since we store staff name, not ID)
+      if (staffName) {
+        filteredData = filteredData.filter(inc => inc.staffName === staffName);
+      }
+      
+      renderIncomeTable(filteredData);
+      document.getElementById('incomeRecordCount').textContent = `${filteredData.length} records`;
+    } else {
+      showAlert('Error filtering income records: ' + result.error, 'danger');
+    }
+  } catch (error) {
+    console.error('Error filtering incomes:', error);
+    showAlert('Error filtering income records: ' + error.message, 'danger');
+  }
+}
+
+/**
+ * Clear all income filters
+ */
+function clearIncomeFilters() {
+  document.getElementById('incomeFilterDateFrom').value = '';
+  document.getElementById('incomeFilterDateTo').value = '';
+  document.getElementById('incomeFilterStaff').value = '';
+  document.getElementById('incomeFilterPayment').value = '';
+  loadIncomes();
+}
+
+/**
+ * Populate staff filter dropdown for income tab
+ */
+function populateIncomeStaffFilter() {
+  const select = document.getElementById('incomeFilterStaff');
+  select.innerHTML = '<option value="">All Staff</option>';
+  
+  allStaff.forEach(staff => {
+    const option = document.createElement('option');
+    option.value = staff.name;
+    option.textContent = staff.name;
+    select.appendChild(option);
+  });
+}
+
+/**
+ * Render income by staff summary table
+ */
+function renderIncomeByStaff() {
+  const tbody = document.getElementById('incomeByStaffBody');
+  tbody.innerHTML = '';
+  
+  if (!incomeSummary.byStaff || incomeSummary.byStaff.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">No data</td></tr>';
+    return;
+  }
+  
+  incomeSummary.byStaff.forEach(item => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${item.staffName}</td>
+      <td class="text-end staff-total">${formatCurrency(item.total)}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+/**
+ * Render income by service summary table
+ */
+function renderIncomeByService() {
+  const tbody = document.getElementById('incomeByServiceBody');
+  tbody.innerHTML = '';
+  
+  if (!incomeSummary.byService || incomeSummary.byService.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">No data</td></tr>';
+    return;
+  }
+  
+  incomeSummary.byService.forEach(item => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${item.serviceName}</td>
+      <td class="text-end service-total">${formatCurrency(item.total)}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+/**
+ * Open edit modal for income record
+ */
+function editIncome(incomeId) {
+  const income = allIncomes.find(i => i.id == incomeId);
+  if (!income) return;
+  
+  document.getElementById('incomeId').value = income.id;
+  document.getElementById('incomeClientDisplay').textContent = income.clientName;
+  document.getElementById('incomeServiceDisplay').textContent = income.serviceName;
+  document.getElementById('incomeAmountDisplay').textContent = formatCurrency(income.amount);
+  document.getElementById('incomePaymentMethod').value = income.paymentMethod || 'cash';
+  document.getElementById('incomeNotes').value = income.notes || '';
+  
+  incomeModalInstance.show();
+}
+
+/**
+ * Submit income form (edit only)
+ */
+async function submitIncomeForm(e) {
+  e.preventDefault();
+  
+  const incomeId = parseInt(document.getElementById('incomeId').value);
+  const paymentMethod = document.getElementById('incomePaymentMethod').value;
+  const notes = document.getElementById('incomeNotes').value;
+  
+  try {
+    const response = await fetch('/php/incomes.php', {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        action: 'edit', 
+        data: { 
+          id: incomeId, 
+          paymentMethod, 
+          notes 
+        } 
+      })
+    });
+    const result = await response.json();
+    if (result.success) {
+      showAlert('Income record updated successfully!', 'success');
+      incomeModalInstance.hide();
+      loadIncomes();
+      getIncomeSummary();
+    } else {
+      showAlert('Error: ' + result.error, 'danger');
+    }
+  } catch (error) {
+    console.error('Error updating income:', error);
+    showAlert('Error updating income record: ' + error.message, 'danger');
+  }
+}
+
+/**
+ * Delete income record and revert appointment status
+ */
+async function deleteIncome(incomeId) {
+  const income = allIncomes.find(i => i.id == incomeId);
+  if (!income) return;
+  
+  if (!confirm(`Delete this income record for ${income.clientName} (${formatCurrency(income.amount)})? This will revert the appointment status to "pending".`) {
+    return;
+  }
+  
+  try {
+    // First, update the appointment status back to pending
+    const aptResponse = await fetch('/php/appointments.php', {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        action: 'updateStatus', 
+        id: income.appointmentId, 
+        status: 'pending' 
+      })
+    });
+    const aptResult = await aptResponse.json();
+    
+    if (!aptResult.success) {
+      showAlert('Error reverting appointment status: ' + aptResult.error, 'danger');
+      return;
+    }
+    
+    showAlert('Income record deleted and appointment status reverted to pending!', 'success');
+    
+    // Reload data
+    loadIncomes();
+    getIncomeSummary();
+    loadAppointmentsData().then(() => {
+      // If calendar is visible, re-render it
+      const appointmentsTab = document.getElementById('appointments-panel');
+      if (appointmentsTab && appointmentsTab.classList.contains('active')) {
+        renderCalendar();
+      }
+    });
+  } catch (error) {
+    console.error('Error deleting income:', error);
+    showAlert('Error deleting income record: ' + error.message, 'danger');
+  }
+}
+
+/**
+ * Get payment method badge CSS class
+ */
+function getPaymentMethodBadgeClass(method) {
+  switch(method) {
+    case 'cash': return 'payment-cash';
+    case 'card': return 'payment-card';
+    case 'check': return 'payment-check';
+    case 'other': return 'payment-other';
+    default: return 'payment-cash';
+  }
+}
+
+/**
+ * Format number as currency
+ */
+function formatCurrency(amount) {
+  return '$' + parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+}
+
+/**
+ * Format date for display
+ */
+function formatDate(dateStr) {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }

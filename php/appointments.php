@@ -23,6 +23,7 @@ $appointmentsFile = __DIR__ . '/../data/appointments.json';
 $clientsFile = __DIR__ . '/../data/clients.json';
 $staffFile = __DIR__ . '/../data/staff.json';
 $servicesFile = __DIR__ . '/../data/services.json';
+$incomesFile = __DIR__ . '/../data/incomes.json';
 
 // Initialize file if it doesn't exist
 if (!file_exists($appointmentsFile)) {
@@ -368,9 +369,12 @@ function deleteAppointment($request) {
 /**
  * Update appointment status
  * Sends email notification to client after status change
+ * 
+ * When status changes TO 'complete': Creates income record automatically
+ * When status changes FROM 'complete': Deletes corresponding income record
  */
 function updateAppointmentStatus($request) {
-  global $appointmentsFile, $clientsFile;
+  global $appointmentsFile, $clientsFile, $staffFile, $servicesFile, $incomesFile;
   
   // Validate required fields
   if (!isset($request['id']) || !isset($request['status'])) {
@@ -380,11 +384,11 @@ function updateAppointmentStatus($request) {
   }
   
   $appointmentId = (int)$request['id'];
-  $status = sanitizeInput($request['status']);
+  $newStatus = sanitizeInput($request['status']);
   
   // Validate status
   $validStatuses = ['pending', 'complete', 'deleted_by_user', 'deleted_by_staff', 'no_show'];
-  if (!in_array($status, $validStatuses)) {
+  if (!in_array($newStatus, $validStatuses)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Invalid status']);
     return;
@@ -397,11 +401,15 @@ function updateAppointmentStatus($request) {
     $content = file_get_contents($appointmentsFile);
     $appointments = json_decode($content, true) ?? [];
     
-    // Find and update status
+    // Find appointment and get old status
     $found = false;
+    $oldStatus = null;
+    $appointmentData = null;
     foreach ($appointments as &$apt) {
       if ($apt['id'] === $appointmentId) {
-        $apt['status'] = $status;
+        $oldStatus = $apt['status'];
+        $appointmentData = $apt;
+        $apt['status'] = $newStatus;
         $found = true;
         break;
       }
@@ -422,6 +430,19 @@ function updateAppointmentStatus($request) {
     flock($handle, LOCK_UN);
     fclose($handle);
     
+    // Handle income record creation/deletion based on status change
+    $incomeRecord = null;
+    $incomeDeleted = false;
+    
+    // Status changed TO 'complete' - create income record
+    if ($newStatus === 'complete' && $oldStatus !== 'complete') {
+      $incomeRecord = createIncomeFromAppointment($appointmentData);
+    }
+    // Status changed FROM 'complete' - delete income record
+    else if ($oldStatus === 'complete' && $newStatus !== 'complete') {
+      $incomeDeleted = deleteIncomeByAppointmentId($appointmentId);
+    }
+    
     // Return updated appointment
     $updatedAppointment = null;
     foreach ($appointments as $apt) {
@@ -434,11 +455,22 @@ function updateAppointmentStatus($request) {
     // Send email notification to client
     sendAppointmentEmail($updatedAppointment['clientId'], $updatedAppointment, 'status_changed');
     
-    echo json_encode([
+    $response = [
       'success' => true,
       'data' => $updatedAppointment,
       'error' => null
-    ]);
+    ];
+    
+    // Include income info in response if applicable
+    if ($incomeRecord) {
+      $response['incomeCreated'] = true;
+      $response['incomeData'] = $incomeRecord;
+    }
+    if ($incomeDeleted) {
+      $response['incomeDeleted'] = true;
+    }
+    
+    echo json_encode($response);
   } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
@@ -447,6 +479,136 @@ function updateAppointmentStatus($request) {
       'error' => 'Failed to update appointment status: ' . $e->getMessage()
     ]);
   }
+}
+
+/**
+ * Create income record from appointment data
+ * Called when appointment status changes to 'complete'
+ */
+function createIncomeFromAppointment($appointment) {
+  global $incomesFile, $clientsFile, $staffFile, $servicesFile;
+  
+  // Load related data
+  $clients = json_decode(file_get_contents($clientsFile), true) ?? [];
+  $staff = json_decode(file_get_contents($staffFile), true) ?? [];
+  $services = json_decode(file_get_contents($servicesFile), true) ?? [];
+  
+  // Find client, staff, and service names
+  $clientName = 'Unknown';
+  $staffName = 'Unknown';
+  $serviceName = 'Unknown';
+  $servicePrice = 0;
+  
+  foreach ($clients as $c) {
+    if ($c['id'] === $appointment['clientId']) {
+      $clientName = $c['name'];
+      break;
+    }
+  }
+  
+  foreach ($staff as $s) {
+    if ($s['id'] === $appointment['staffId']) {
+      $staffName = $s['name'];
+      break;
+    }
+  }
+  
+  foreach ($services as $svc) {
+    if ($svc['id'] === $appointment['serviceId']) {
+      $serviceName = $svc['name'];
+      $servicePrice = (float)$svc['price'];
+      break;
+    }
+  }
+  
+  // Read existing incomes
+  $handle = fopen($incomesFile, 'r+');
+  flock($handle, LOCK_EX);
+  $content = file_get_contents($incomesFile);
+  $incomes = json_decode($content, true) ?? [];
+  
+  // Check if income already exists for this appointment
+  foreach ($incomes as $inc) {
+    if ($inc['appointmentId'] === $appointment['id']) {
+      flock($handle, LOCK_UN);
+      fclose($handle);
+      return null; // Already exists
+    }
+  }
+  
+  // Generate new ID
+  $maxId = 0;
+  foreach ($incomes as $inc) {
+    if ($inc['id'] > $maxId) {
+      $maxId = $inc['id'];
+    }
+  }
+  $newId = $maxId + 1;
+  
+  // Create new income record
+  $newIncome = [
+    'id' => $newId,
+    'appointmentId' => $appointment['id'],
+    'clientName' => $clientName,
+    'staffName' => $staffName,
+    'serviceName' => $serviceName,
+    'amount' => $servicePrice,
+    'date' => $appointment['date'],
+    'time' => $appointment['time'],
+    'status' => 'completed',
+    'paymentMethod' => 'cash',
+    'notes' => '',
+    'completedAt' => date('Y-m-d\TH:i:s')
+  ];
+  
+  // Add to array and write back
+  $incomes[] = $newIncome;
+  ftruncate($handle, 0);
+  rewind($handle);
+  fwrite($handle, json_encode($incomes, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+  flock($handle, LOCK_UN);
+  fclose($handle);
+  
+  return $newIncome;
+}
+
+/**
+ * Delete income record by appointment ID
+ * Called when appointment status reverts from 'complete'
+ */
+function deleteIncomeByAppointmentId($appointmentId) {
+  global $incomesFile;
+  
+  $handle = fopen($incomesFile, 'r+');
+  flock($handle, LOCK_EX);
+  $content = file_get_contents($incomesFile);
+  $incomes = json_decode($content, true) ?? [];
+  
+  // Find and remove income with matching appointmentId
+  $found = false;
+  $incomes = array_filter($incomes, function($inc) use ($appointmentId, &$found) {
+    if ($inc['appointmentId'] === $appointmentId) {
+      $found = true;
+      return false;
+    }
+    return true;
+  });
+  
+  if (!$found) {
+    flock($handle, LOCK_UN);
+    fclose($handle);
+    return false;
+  }
+  
+  // Reindex array and write back
+  $incomes = array_values($incomes);
+  ftruncate($handle, 0);
+  rewind($handle);
+  fwrite($handle, json_encode($incomes, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+  flock($handle, LOCK_UN);
+  fclose($handle);
+  
+  return true;
 }
 
 /**
