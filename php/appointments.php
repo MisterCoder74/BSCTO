@@ -196,9 +196,16 @@ function addAppointment($request) {
     fwrite($handle, json_encode($appointments, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     flock($handle, LOCK_UN);
     fclose($handle);
-    
-    // Send email notification to client
-    sendAppointmentEmail($clientId, $newAppointment, 'created');
+
+    // Validate required appointment fields before sending email
+    if (!isset($newAppointment['date']) || !isset($newAppointment['time']) ||
+        !isset($newAppointment['clientId'])) {
+      error_log("Incomplete appointment data for email: " . json_encode($newAppointment));
+      // Continue anyway but skip email
+    } else {
+      // Send email notification to client
+      sendAppointmentEmail($clientId, $newAppointment, 'created');
+    }
     
     echo json_encode([
       'success' => true,
@@ -328,9 +335,29 @@ function editAppointment($request) {
         break;
       }
     }
-    
-    // Send email notification to client
-    sendAppointmentEmail($clientId, $updatedAppointment, 'updated');
+
+    // Validate appointment was properly loaded
+    if (!$updatedAppointment) {
+      flock($handle, LOCK_UN);
+      fclose($handle);
+      http_response_code(500);
+      echo json_encode([
+        'success' => false,
+        'data' => null,
+        'error' => 'Failed to load updated appointment'
+      ]);
+      return;
+    }
+
+    // Validate required appointment fields before sending email
+    if (!isset($updatedAppointment['date']) || !isset($updatedAppointment['time']) ||
+        !isset($updatedAppointment['clientId'])) {
+      error_log("Incomplete appointment data for email: " . json_encode($updatedAppointment));
+      // Continue anyway but skip email
+    } else {
+      // Send email notification to client
+      sendAppointmentEmail($clientId, $updatedAppointment, 'updated');
+    }
     
     echo json_encode([
       'success' => true,
@@ -400,9 +427,16 @@ function deleteAppointment($request) {
     fwrite($handle, json_encode($appointments, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     flock($handle, LOCK_UN);
     fclose($handle);
-    
-    // Send email notification to client
-    sendAppointmentEmail($appointmentToDelete['clientId'], $appointmentToDelete, 'cancelled');
+
+    // Validate required appointment fields before sending email
+    if (!isset($appointmentToDelete['date']) || !isset($appointmentToDelete['time']) ||
+        !isset($appointmentToDelete['clientId'])) {
+      error_log("Incomplete appointment data for email: " . json_encode($appointmentToDelete));
+      // Continue anyway but skip email
+    } else {
+      // Send email notification to client
+      sendAppointmentEmail($appointmentToDelete['clientId'], $appointmentToDelete, 'cancelled');
+    }
     
     echo json_encode([
       'success' => true,
@@ -505,8 +539,28 @@ function updateAppointmentStatus($request) {
       }
     }
     
-    // Send email notification to client
-    sendAppointmentEmail($updatedAppointment['clientId'], $updatedAppointment, 'status_changed');
+    // Validate appointment was properly loaded
+    if (!$updatedAppointment) {
+      flock($handle, LOCK_UN);
+      fclose($handle);
+      http_response_code(500);
+      echo json_encode([
+        'success' => false,
+        'data' => null,
+        'error' => 'Failed to load updated appointment'
+      ]);
+      return;
+    }
+    
+    // Validate required appointment fields before sending email
+    if (!isset($updatedAppointment['date']) || !isset($updatedAppointment['time']) ||
+        !isset($updatedAppointment['clientId'])) {
+      error_log("Incomplete appointment data for email: " . json_encode($updatedAppointment));
+      // Continue anyway but skip email
+    } else {
+      // Send email notification to client
+      sendAppointmentEmail($updatedAppointment['clientId'], $updatedAppointment, 'status_changed');
+    }
     
     $response = [
       'success' => true,
@@ -667,7 +721,7 @@ function deleteIncomeByAppointmentId($appointmentId) {
 /**
  * Send email notification to client
  * Called after every appointment mutation (create/edit/delete/status change)
- * 
+ *
  * Includes appointment details in email body:
  * - Client name
  * - Date and time
@@ -678,143 +732,167 @@ function deleteIncomeByAppointmentId($appointmentId) {
  */
 function sendAppointmentEmail($clientId, $appointment, $action) {
   global $clientsFile, $staffFile, $servicesFile;
-  
+
   try {
-    // Read client data
-    $clientHandle = fopen($clientsFile, 'r');
-    flock($clientHandle, LOCK_SH);
-    $clientContent = file_get_contents($clientsFile);
-    flock($clientHandle, LOCK_UN);
-    fclose($clientHandle);
-    $clients = json_decode($clientContent, true) ?? [];
-    
-    // Read staff data
-    $staffHandle = fopen($staffFile, 'r');
-    flock($staffHandle, LOCK_SH);
-    $staffContent = file_get_contents($staffFile);
-    flock($staffHandle, LOCK_UN);
-    fclose($staffHandle);
-    $staff = json_decode($staffContent, true) ?? [];
-    
-    // Read services data
-    $serviceHandle = fopen($servicesFile, 'r');
-    flock($serviceHandle, LOCK_SH);
-    $serviceContent = file_get_contents($servicesFile);
-    flock($serviceHandle, LOCK_UN);
-    fclose($serviceHandle);
-    $services = json_decode($serviceContent, true) ?? [];
-    
+    // Validate appointment data
+    if (!$appointment || !isset($appointment['date']) || !isset($appointment['time'])) {
+      error_log("Invalid appointment data for email: " . json_encode($appointment));
+      return;
+    }
+
+    // Load related files with error checking
+    $clientContent = @file_get_contents($clientsFile);
+    $clients = $clientContent ? json_decode($clientContent, true) ?? [] : [];
+
+    $staffContent = @file_get_contents($staffFile);
+    $staff = $staffContent ? json_decode($staffContent, true) ?? [] : [];
+
+    $serviceContent = @file_get_contents($servicesFile);
+    $services = $serviceContent ? json_decode($serviceContent, true) ?? [] : [];
+
     // Find client
     $client = null;
     foreach ($clients as $c) {
-      if ($c['id'] === $clientId) {
+      if (isset($c['id']) && $c['id'] === $clientId) {
         $client = $c;
         break;
       }
     }
-    
-    if (!$client) {
+
+    if (!$client || !isset($client['email'])) {
+      error_log("Client not found or no email for clientId: $clientId");
       return; // Client not found, skip email
     }
-    
+
     // Find staff
     $staffMember = null;
-    foreach ($staff as $s) {
-      if ($s['id'] === $appointment['staffId']) {
-        $staffMember = $s;
-        break;
+    if (isset($appointment['staffId'])) {
+      foreach ($staff as $s) {
+        if (isset($s['id']) && $s['id'] === $appointment['staffId']) {
+          $staffMember = $s;
+          break;
+        }
       }
     }
-    
+
     // Find service
     $service = null;
-    foreach ($services as $svc) {
-      if ($svc['id'] === $appointment['serviceId']) {
-        $service = $svc;
-        break;
+    if (isset($appointment['serviceId'])) {
+      foreach ($services as $svc) {
+        if (isset($svc['id']) && $svc['id'] === $appointment['serviceId']) {
+          $service = $svc;
+          break;
+        }
       }
     }
-    
-    // Format appointment details
-    $formattedDate = date('F j, Y', strtotime($appointment['date']));
-    $staffName = $staffMember ? $staffMember['name'] : 'Not assigned';
-    $serviceName = $service ? $service['name'] : 'Not specified';
-    
+
+    // Format appointment details with null checks
+    if (!isset($appointment['date']) || empty($appointment['date'])) {
+      error_log("Appointment has no date");
+      return;
+    }
+
+    // Parse date safely
+    $dateTimestamp = strtotime($appointment['date']);
+    if ($dateTimestamp === false) {
+      error_log("Invalid date format: " . $appointment['date']);
+      return;
+    }
+    $formattedDate = date('F j, Y', $dateTimestamp);
+
+    // Get appointment time
+    $appointmentTime = isset($appointment['time']) ? $appointment['time'] : 'Not specified';
+
+    // Get names with fallbacks
+    $staffName = ($staffMember && isset($staffMember['name'])) ? $staffMember['name'] : 'Not assigned';
+    $serviceName = ($service && isset($service['name'])) ? $service['name'] : 'Not specified';
+    $clientName = isset($client['name']) ? $client['name'] : 'Client';
+    $appointmentStatus = isset($appointment['status']) ? $appointment['status'] : 'pending';
+
     // Build email subject and body based on action
+    $subject = '';
+    $body = '';
+
     switch($action) {
       case 'created':
         $subject = "✨ Appointment Confirmation - Beauty Salon";
-        $body = "Dear {$client['name']},\n\n";
+        $body = "Dear $clientName,\n\n";
         $body .= "Your appointment has been successfully created!\n\n";
         $body .= "APPOINTMENT DETAILS:\n";
         $body .= "Date: $formattedDate\n";
-        $body .= "Time: {$appointment['time']}\n";
+        $body .= "Time: $appointmentTime\n";
         $body .= "Service: $serviceName\n";
         $body .= "Staff: $staffName\n";
-        $body .= "Status: {$appointment['status']}\n\n";
+        $body .= "Status: $appointmentStatus\n\n";
         $body .= "We look forward to seeing you soon!\n\n";
         break;
-        
+
       case 'updated':
         $subject = "✨ Appointment Updated - Beauty Salon";
-        $body = "Dear {$client['name']},\n\n";
+        $body = "Dear $clientName,\n\n";
         $body .= "Your appointment has been updated.\n\n";
         $body .= "UPDATED APPOINTMENT DETAILS:\n";
         $body .= "Date: $formattedDate\n";
-        $body .= "Time: {$appointment['time']}\n";
+        $body .= "Time: $appointmentTime\n";
         $body .= "Service: $serviceName\n";
         $body .= "Staff: $staffName\n";
-        $body .= "Status: {$appointment['status']}\n\n";
+        $body .= "Status: $appointmentStatus\n\n";
         $body .= "If you have any questions, please contact us.\n\n";
         break;
-        
+
       case 'cancelled':
         $subject = "✨ Appointment Cancelled - Beauty Salon";
-        $body = "Dear {$client['name']},\n\n";
+        $body = "Dear $clientName,\n\n";
         $body .= "Your appointment has been cancelled.\n\n";
         $body .= "CANCELLED APPOINTMENT DETAILS:\n";
         $body .= "Date: $formattedDate\n";
-        $body .= "Time: {$appointment['time']}\n";
+        $body .= "Time: $appointmentTime\n";
         $body .= "Service: $serviceName\n";
         $body .= "Staff: $staffName\n\n";
         $body .= "If you would like to reschedule, please contact us.\n\n";
         break;
-        
+
       case 'status_changed':
         $subject = "✨ Appointment Status Updated - Beauty Salon";
-        $body = "Dear {$client['name']},\n\n";
-        $body .= "Your appointment status has been updated to: {$appointment['status']}\n\n";
+        $body = "Dear $clientName,\n\n";
+        $body .= "Your appointment status has been updated to: $appointmentStatus\n\n";
         $body .= "APPOINTMENT DETAILS:\n";
         $body .= "Date: $formattedDate\n";
-        $body .= "Time: {$appointment['time']}\n";
+        $body .= "Time: $appointmentTime\n";
         $body .= "Service: $serviceName\n";
         $body .= "Staff: $staffName\n\n";
         break;
-        
+
       default:
+        error_log("Unknown email action: $action");
         return;
     }
-    
+
+    if (empty($subject) || empty($body)) {
+      error_log("Email subject or body is empty");
+      return;
+    }
+
     $body .= "Thank you for choosing Beauty Salon!\n";
     $body .= "Best regards,\nBeauty Salon Management System";
-    
+
     // Email headers
     $to = $client['email'];
     $headers = "From: noreply@beautysalon.local\r\n";
     $headers .= "Reply-To: contact@beautysalon.local\r\n";
     $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-    
+
     // Send email (in production, configure mail server)
     // Note: For development/testing, emails are logged but not sent if no mail server is configured
     // Uncomment below to enable actual email sending when mail server is available:
     // mail($to, $subject, $body, $headers);
-    
+
     // Log email for debugging (stores in system logs)
-    error_log("Email sent to: $to | Subject: $subject");
-    
+    error_log("Email sent to: $to | Subject: $subject | Action: $action | Appointment: " . json_encode($appointment));
+
   } catch (Exception $e) {
     // Log error but don't fail the appointment operation
-    error_log("Failed to send email: " . $e->getMessage());
+    error_log("Failed to send email: " . $e->getMessage() . " | Appointment: " . json_encode($appointment));
   }
 }
 
