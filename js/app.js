@@ -73,14 +73,21 @@ async function loadAllData() {
  */
 async function loadClientsData() {
   try {
+    console.log('Loading clients data...');
     const response = await fetch('php/clients.php?action=list', { 
       cache: 'no-store' 
     });
+    console.log('Clients response status:', response.status);
     const result = await response.json();
+    console.log('Clients response data:', result);
+    
     if (result.success) {
       allClients.length = 0;
       allClients.push(...result.data);
       populateClientDropdowns();
+      console.log('Clients data loaded successfully:', result.data.length, 'clients');
+    } else {
+      console.error('Failed to load clients:', result.error);
     }
   } catch (error) {
     console.error('Error loading clients:', error);
@@ -93,14 +100,21 @@ async function loadClientsData() {
  */
 async function loadStaffData() {
   try {
+    console.log('Loading staff data...');
     const response = await fetch('php/staff.php?action=list', { 
       cache: 'no-store' 
     });
+    console.log('Staff response status:', response.status);
     const result = await response.json();
+    console.log('Staff response data:', result);
+    
     if (result.success) {
       allStaff.length = 0;
       allStaff.push(...result.data);
       populateStaffDropdowns();
+      console.log('Staff data loaded successfully:', result.data.length, 'staff members');
+    } else {
+      console.error('Failed to load staff:', result.error);
     }
   } catch (error) {
     console.error('Error loading staff:', error);
@@ -113,14 +127,21 @@ async function loadStaffData() {
  */
 async function loadServicesData() {
   try {
+    console.log('Loading services data...');
     const response = await fetch('php/services.php?action=list', { 
       cache: 'no-store' 
     });
+    console.log('Services response status:', response.status);
     const result = await response.json();
+    console.log('Services response data:', result);
+    
     if (result.success) {
       allServices.length = 0;
       allServices.push(...result.data);
       populateServiceDropdowns();
+      console.log('Services data loaded successfully:', result.data.length, 'services');
+    } else {
+      console.error('Failed to load services:', result.error);
     }
   } catch (error) {
     console.error('Error loading services:', error);
@@ -133,13 +154,20 @@ async function loadServicesData() {
  */
 async function loadAppointmentsData() {
   try {
+    console.log('Loading appointments data...');
     const response = await fetch('php/appointments.php?action=list', { 
       cache: 'no-store' 
     });
+    console.log('Appointments response status:', response.status);
     const result = await response.json();
+    console.log('Appointments response data:', result);
+    
     if (result.success) {
       allAppointments.length = 0;
       allAppointments.push(...result.data);
+      console.log('Appointments data loaded successfully:', result.data.length, 'appointments');
+    } else {
+      console.error('Failed to load appointments:', result.error);
     }
   } catch (error) {
     console.error('Error loading appointments:', error);
@@ -431,11 +459,41 @@ async function submitClientForm(e) {
   const clientId = document.getElementById('clientId').value;
   const action = clientId ? 'edit' : 'add';
   
+  // ===== CLIENT-SIDE VALIDATION =====
+  // Validate required fields
+  const clientName = document.getElementById('clientName').value;
+  const clientEmail = document.getElementById('clientEmail').value;
+  const clientPhone = document.getElementById('clientPhone').value;
+  
+  if (!clientName) {
+    showAlert('Please enter client name', 'danger');
+    return;
+  }
+  
+  if (!clientEmail) {
+    showAlert('Please enter client email', 'danger');
+    return;
+  }
+  
+  // Validate email format
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail)) {
+    showAlert('Please enter a valid email address', 'danger');
+    return;
+  }
+  
+  if (!clientPhone) {
+    showAlert('Please enter client phone', 'danger');
+    return;
+  }
+  
+  // Log data for debugging (visible in browser console)
+  console.log('Submitting client:', { action, data: { name: clientName, email: clientEmail, phone: clientPhone }});
+  
   const clientData = {
     id: clientId ? parseInt(clientId) : undefined,
-    name: document.getElementById('clientName').value,
-    email: document.getElementById('clientEmail').value,
-    phone: document.getElementById('clientPhone').value,
+    name: clientName,
+    email: clientEmail,
+    phone: clientPhone,
     notes: document.getElementById('clientNotes').value,
     isVIP: document.getElementById('clientVIP').checked,
     isBadClient: document.getElementById('clientBad').checked,
@@ -449,7 +507,11 @@ async function submitClientForm(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, data: clientData })
     });
+    
+    console.log('Client response status:', response.status);
     const result = await response.json();
+    console.log('Client response data:', result);
+    
     if (result.success) {
       showAlert(`Client ${action === 'add' ? 'added' : 'updated'} successfully!`, 'success');
       clientModalInstance.hide();
@@ -523,11 +585,41 @@ async function submitStaffForm(e) {
   const staffId = document.getElementById('staffId').value;
   const action = staffId ? 'edit' : 'add';
   
+  // ===== CLIENT-SIDE VALIDATION =====
+  // Validate required fields
+  const staffName = document.getElementById('staffName').value;
+  const staffRole = document.getElementById('staffRole').value;
+  const staffEmail = document.getElementById('staffEmail').value;
+  
+  if (!staffName) {
+    showAlert('Please enter staff name', 'danger');
+    return;
+  }
+  
+  if (!staffRole) {
+    showAlert('Please enter staff role', 'danger');
+    return;
+  }
+  
+  if (!staffEmail) {
+    showAlert('Please enter staff email', 'danger');
+    return;
+  }
+  
+  // Validate email format
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(staffEmail)) {
+    showAlert('Please enter a valid email address', 'danger');
+    return;
+  }
+  
+  // Log data for debugging (visible in browser console)
+  console.log('Submitting staff:', { action, data: { name: staffName, role: staffRole, email: staffEmail }});
+  
   const staffData = {
     id: staffId ? parseInt(staffId) : undefined,
-    name: document.getElementById('staffName').value,
-    role: document.getElementById('staffRole').value,
-    email: document.getElementById('staffEmail').value
+    name: staffName,
+    role: staffRole,
+    email: staffEmail
   };
   
   try {
@@ -537,7 +629,11 @@ async function submitStaffForm(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, data: staffData })
     });
+    
+    console.log('Staff response status:', response.status);
     const result = await response.json();
+    console.log('Staff response data:', result);
+    
     if (result.success) {
       showAlert(`Staff member ${action === 'add' ? 'added' : 'updated'} successfully!`, 'success');
       staffModalInstance.hide();
@@ -611,11 +707,45 @@ async function submitServiceForm(e) {
   const serviceId = document.getElementById('serviceId').value;
   const action = serviceId ? 'edit' : 'add';
   
+  // ===== CLIENT-SIDE VALIDATION =====
+  // Validate required fields
+  const serviceName = document.getElementById('serviceName').value;
+  const serviceDuration = document.getElementById('serviceDuration').value;
+  const servicePrice = document.getElementById('servicePrice').value;
+  
+  if (!serviceName) {
+    showAlert('Please enter service name', 'danger');
+    return;
+  }
+  
+  if (!serviceDuration) {
+    showAlert('Please enter service duration', 'danger');
+    return;
+  }
+  
+  if (parseInt(serviceDuration) <= 0) {
+    showAlert('Service duration must be greater than 0', 'danger');
+    return;
+  }
+  
+  if (!servicePrice) {
+    showAlert('Please enter service price', 'danger');
+    return;
+  }
+  
+  if (parseFloat(servicePrice) < 0) {
+    showAlert('Service price cannot be negative', 'danger');
+    return;
+  }
+  
+  // Log data for debugging (visible in browser console)
+  console.log('Submitting service:', { action, data: { name: serviceName, duration: serviceDuration, price: servicePrice }});
+  
   const serviceData = {
     id: serviceId ? parseInt(serviceId) : undefined,
-    name: document.getElementById('serviceName').value,
-    duration: parseInt(document.getElementById('serviceDuration').value),
-    price: parseFloat(document.getElementById('servicePrice').value)
+    name: serviceName,
+    duration: parseInt(serviceDuration),
+    price: parseFloat(servicePrice)
   };
   
   try {
@@ -625,7 +755,11 @@ async function submitServiceForm(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, data: serviceData })
     });
+    
+    console.log('Service response status:', response.status);
     const result = await response.json();
+    console.log('Service response data:', result);
+    
     if (result.success) {
       showAlert(`Service ${action === 'add' ? 'added' : 'updated'} successfully!`, 'success');
       serviceModalInstance.hide();
@@ -885,16 +1019,67 @@ async function submitAppointmentForm(e) {
   const appointmentId = document.getElementById('appointmentId').value;
   const action = appointmentId ? 'edit' : 'add';
   
+  // ===== CLIENT-SIDE VALIDATION =====
+  // Get form values
+  const clientIdField = document.getElementById('appointmentClient').value;
+  const staffIdField = document.getElementById('appointmentStaff').value;
+  const serviceIdField = document.getElementById('appointmentService').value;
+  const dateField = document.getElementById('appointmentDate').value;
+  const timeField = document.getElementById('appointmentTime').value;
+  
+  // Validate each required field with specific error messages
+  if (!clientIdField) {
+    showAlert('Please select a client', 'danger');
+    return;
+  }
+  
+  if (!staffIdField) {
+    showAlert('Please select a staff member', 'danger');
+    return;
+  }
+  
+  if (!serviceIdField) {
+    showAlert('Please select a service', 'danger');
+    return;
+  }
+  
+  if (!dateField) {
+    showAlert('Please select a date', 'danger');
+    return;
+  }
+  
+  if (!timeField) {
+    showAlert('Please select a time', 'danger');
+    return;
+  }
+  
+  // Validate date format (YYYY-MM-DD)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateField)) {
+    showAlert('Invalid date format. Please use YYYY-MM-DD', 'danger');
+    return;
+  }
+  
+  // Validate time format (HH:MM)
+  if (!/^\d{2}:\d{2}$/.test(timeField)) {
+    showAlert('Invalid time format. Please use HH:MM', 'danger');
+    return;
+  }
+  
+  // Build appointment data object
   const appointmentData = {
     id: appointmentId ? parseInt(appointmentId) : undefined,
-    clientId: parseInt(document.getElementById('appointmentClient').value),
-    staffId: parseInt(document.getElementById('appointmentStaff').value),
-    serviceId: parseInt(document.getElementById('appointmentService').value),
-    date: document.getElementById('appointmentDate').value,
-    time: document.getElementById('appointmentTime').value,
+    clientId: parseInt(clientIdField),
+    staffId: parseInt(staffIdField),
+    serviceId: parseInt(serviceIdField),
+    date: dateField,
+    time: timeField,
     status: document.getElementById('appointmentStatus').value
   };
   
+  // Log data for debugging (visible in browser console)
+  console.log('Submitting appointment:', { action, data: appointmentData });
+  
+  // ===== SEND TO SERVER =====
   try {
     const response = await fetch('php/appointments.php', {
       method: 'POST',
@@ -902,7 +1087,13 @@ async function submitAppointmentForm(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, data: appointmentData })
     });
+    
+    // Log response status
+    console.log('Appointment response status:', response.status);
+    
     const result = await response.json();
+    console.log('Appointment response data:', result);
+    
     if (result.success) {
       let message = `Appointment ${action === 'add' ? 'created' : 'updated'} successfully! Email sent to client.`;
       if (result.incomeCreated) {
