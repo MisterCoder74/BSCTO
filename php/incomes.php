@@ -27,17 +27,37 @@ if (!file_exists($incomesFile)) {
   file_put_contents($incomesFile, json_encode([]));
 }
 
-// Get the action parameter
-$action = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : null);
-
-// Handle GET/POST request body
+// Get action from multiple sources (priority: JSON body > GET > POST form data)
 $request = null;
+$action = null;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  // Try to get JSON body first
   $input = file_get_contents('php://input');
   $request = json_decode($input, true);
-  if (!$request) {
+  
+  if ($request && isset($request['action'])) {
+    $action = $request['action'];
+  } else {
+    // Fallback to form data
     $request = $_POST;
+    if (isset($_POST['action'])) {
+      $action = $_POST['action'];
+    }
   }
+}
+
+// Also check GET parameter
+if (!$action && isset($_GET['action'])) {
+  $action = $_GET['action'];
+}
+
+// If still no action, log and return error
+if (!$action) {
+  http_response_code(400);
+  echo json_encode(['success' => false, 'error' => 'Action parameter is required']);
+  error_log('No action parameter provided. REQUEST_METHOD: ' . $_SERVER['REQUEST_METHOD'] . ' | POST: ' . json_encode($_POST) . ' | REQUEST: ' . json_encode($request));
+  exit;
 }
 
 // Route to appropriate action

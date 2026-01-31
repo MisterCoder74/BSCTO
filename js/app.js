@@ -486,9 +486,6 @@ async function submitClientForm(e) {
     return;
   }
   
-  // Log data for debugging (visible in browser console)
-  console.log('Submitting client:', { action, data: { name: clientName, email: clientEmail, phone: clientPhone }});
-  
   const clientData = {
     id: clientId ? parseInt(clientId) : undefined,
     name: clientName,
@@ -499,18 +496,24 @@ async function submitClientForm(e) {
     isBadClient: document.getElementById('clientBad').checked,
     appointments: clientId ? (allClients.find(c => c.id == clientId)?.appointments || []) : []
   };
+
+  // Log data for debugging (visible in browser console)
+  const endpoint = 'php/clients.php';
+  const body = { action, data: clientData };
+  console.log('Sending request to:', endpoint);
+  console.log('Request data:', body);
   
   try {
-    const response = await fetch('php/clients.php', {
+    const response = await fetch(endpoint, {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, data: clientData })
+      body: JSON.stringify(body)
     });
     
-    console.log('Client response status:', response.status);
+    console.log('Response status:', response.status);
     const result = await response.json();
-    console.log('Client response data:', result);
+    console.log('Response data:', result);
     
     if (result.success) {
       showAlert(`Client ${action === 'add' ? 'added' : 'updated'} successfully!`, 'success');
@@ -532,14 +535,22 @@ async function submitClientForm(e) {
 async function deleteClient(clientId) {
   if (!confirm('Are you sure you want to delete this client?')) return;
   
+  const endpoint = 'php/clients.php';
+  const body = { action: 'delete', id: clientId };
+  console.log('Sending request to:', endpoint);
+  console.log('Request data:', body);
+
   try {
-    const response = await fetch('php/clients.php', {
+    const response = await fetch(endpoint, {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', id: clientId })
+      body: JSON.stringify(body)
     });
+    
+    console.log('Response status:', response.status);
     const result = await response.json();
+    console.log('Response data:', result);
     if (result.success) {
       showAlert('Client deleted successfully!', 'success');
       loadClients();
@@ -612,9 +623,6 @@ async function submitStaffForm(e) {
     return;
   }
   
-  // Log data for debugging (visible in browser console)
-  console.log('Submitting staff:', { action, data: { name: staffName, role: staffRole, email: staffEmail }});
-  
   const staffData = {
     id: staffId ? parseInt(staffId) : undefined,
     name: staffName,
@@ -622,17 +630,23 @@ async function submitStaffForm(e) {
     email: staffEmail
   };
   
+  // Log data for debugging (visible in browser console)
+  const endpoint = 'php/staff.php';
+  const body = { action, data: staffData };
+  console.log('Sending request to:', endpoint);
+  console.log('Request data:', body);
+  
   try {
-    const response = await fetch('php/staff.php', {
+    const response = await fetch(endpoint, {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, data: staffData })
+      body: JSON.stringify(body)
     });
     
-    console.log('Staff response status:', response.status);
+    console.log('Response status:', response.status);
     const result = await response.json();
-    console.log('Staff response data:', result);
+    console.log('Response data:', result);
     
     if (result.success) {
       showAlert(`Staff member ${action === 'add' ? 'added' : 'updated'} successfully!`, 'success');
@@ -653,14 +667,22 @@ async function submitStaffForm(e) {
 async function deleteStaff(staffId) {
   if (!confirm('Are you sure you want to delete this staff member?')) return;
   
+  const endpoint = 'php/staff.php';
+  const body = { action: 'delete', id: staffId };
+  console.log('Sending request to:', endpoint);
+  console.log('Request data:', body);
+  
   try {
-    const response = await fetch('php/staff.php', {
+    const response = await fetch(endpoint, {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', id: staffId })
+      body: JSON.stringify(body)
     });
+    
+    console.log('Response status:', response.status);
     const result = await response.json();
+    console.log('Response data:', result);
     if (result.success) {
       showAlert('Staff member deleted successfully!', 'success');
       loadStaff();
@@ -738,9 +760,6 @@ async function submitServiceForm(e) {
     return;
   }
   
-  // Log data for debugging (visible in browser console)
-  console.log('Submitting service:', { action, data: { name: serviceName, duration: serviceDuration, price: servicePrice }});
-  
   const serviceData = {
     id: serviceId ? parseInt(serviceId) : undefined,
     name: serviceName,
@@ -748,17 +767,23 @@ async function submitServiceForm(e) {
     price: parseFloat(servicePrice)
   };
   
+  // Log data for debugging (visible in browser console)
+  const endpoint = 'php/services.php';
+  const body = { action, data: serviceData };
+  console.log('Sending request to:', endpoint);
+  console.log('Request data:', body);
+  
   try {
-    const response = await fetch('php/services.php', {
+    const response = await fetch(endpoint, {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, data: serviceData })
+      body: JSON.stringify(body)
     });
     
-    console.log('Service response status:', response.status);
+    console.log('Response status:', response.status);
     const result = await response.json();
-    console.log('Service response data:', result);
+    console.log('Response data:', result);
     
     if (result.success) {
       showAlert(`Service ${action === 'add' ? 'added' : 'updated'} successfully!`, 'success');
@@ -779,14 +804,22 @@ async function submitServiceForm(e) {
 async function deleteService(serviceId) {
   if (!confirm('Are you sure you want to delete this service?')) return;
   
+  const endpoint = 'php/services.php';
+  const body = { action: 'delete', id: serviceId };
+  console.log('Sending request to:', endpoint);
+  console.log('Request data:', body);
+  
   try {
-    const response = await fetch('php/services.php', {
+    const response = await fetch(endpoint, {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', id: serviceId })
+      body: JSON.stringify(body)
     });
+    
+    console.log('Response status:', response.status);
     const result = await response.json();
+    console.log('Response data:', result);
     if (result.success) {
       showAlert('Service deleted successfully!', 'success');
       loadServices();
@@ -1077,22 +1110,25 @@ async function submitAppointmentForm(e) {
   };
   
   // Log data for debugging (visible in browser console)
-  console.log('Submitting appointment:', { action, data: appointmentData });
-  
   // ===== SEND TO SERVER =====
+  const endpoint = 'php/appointments.php';
+  const body = { action, data: appointmentData };
+  console.log('Sending request to:', endpoint);
+  console.log('Request data:', body);
+  
   try {
-    const response = await fetch('php/appointments.php', {
+    const response = await fetch(endpoint, {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, data: appointmentData })
+      body: JSON.stringify(body)
     });
     
     // Log response status
-    console.log('Appointment response status:', response.status);
+    console.log('Response status:', response.status);
     
     const result = await response.json();
-    console.log('Appointment response data:', result);
+    console.log('Response data:', result);
     
     if (result.success) {
       let message = `Appointment ${action === 'add' ? 'created' : 'updated'} successfully! Email sent to client.`;
@@ -1128,14 +1164,22 @@ async function submitAppointmentForm(e) {
 async function deleteAppointment(appointmentId) {
   if (!confirm('Are you sure you want to delete this appointment?')) return;
   
+  const endpoint = 'php/appointments.php';
+  const body = { action: 'delete', id: appointmentId };
+  console.log('Sending request to:', endpoint);
+  console.log('Request data:', body);
+  
   try {
-    const response = await fetch('php/appointments.php', {
+    const response = await fetch(endpoint, {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', id: appointmentId })
+      body: JSON.stringify(body)
     });
+    
+    console.log('Response status:', response.status);
     const result = await response.json();
+    console.log('Response data:', result);
     if (result.success) {
       showAlert('Appointment deleted! Notification sent to client.', 'success');
       loadAppointmentsData().then(() => renderCalendar());
