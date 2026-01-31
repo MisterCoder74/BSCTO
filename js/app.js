@@ -68,12 +68,12 @@ async function loadAllData() {
 }
 
 /**
- * FETCH: Load clients from /php/clients.php
+ * FETCH: Load clients from php/clients.php
  * Uses cache: 'no-store' to bypass browser caching
  */
 async function loadClientsData() {
   try {
-    const response = await fetch('/php/clients.php?action=list', { 
+    const response = await fetch('php/clients.php?action=list', { 
       cache: 'no-store' 
     });
     const result = await response.json();
@@ -88,12 +88,12 @@ async function loadClientsData() {
 }
 
 /**
- * FETCH: Load staff from /php/staff.php
+ * FETCH: Load staff from php/staff.php
  * Uses cache: 'no-store' to bypass browser caching
  */
 async function loadStaffData() {
   try {
-    const response = await fetch('/php/staff.php?action=list', { 
+    const response = await fetch('php/staff.php?action=list', { 
       cache: 'no-store' 
     });
     const result = await response.json();
@@ -108,12 +108,12 @@ async function loadStaffData() {
 }
 
 /**
- * FETCH: Load services from /php/services.php
+ * FETCH: Load services from php/services.php
  * Uses cache: 'no-store' to bypass browser caching
  */
 async function loadServicesData() {
   try {
-    const response = await fetch('/php/services.php?action=list', { 
+    const response = await fetch('php/services.php?action=list', { 
       cache: 'no-store' 
     });
     const result = await response.json();
@@ -128,12 +128,12 @@ async function loadServicesData() {
 }
 
 /**
- * FETCH: Load appointments from /php/appointments.php
+ * FETCH: Load appointments from php/appointments.php
  * Uses cache: 'no-store' to bypass browser caching
  */
 async function loadAppointmentsData() {
   try {
-    const response = await fetch('/php/appointments.php?action=list', { 
+    const response = await fetch('php/appointments.php?action=list', { 
       cache: 'no-store' 
     });
     const result = await response.json();
@@ -251,7 +251,7 @@ function setupEventListeners() {
  */
 async function loadClients() {
   try {
-    const response = await fetch('/php/clients.php?action=list', { 
+    const response = await fetch('php/clients.php?action=list', { 
       cache: 'no-store' 
     });
     const result = await response.json();
@@ -275,7 +275,7 @@ async function loadClients() {
  */
 async function loadStaff() {
   try {
-    const response = await fetch('/php/staff.php?action=list', { 
+    const response = await fetch('php/staff.php?action=list', { 
       cache: 'no-store' 
     });
     const result = await response.json();
@@ -299,7 +299,7 @@ async function loadStaff() {
  */
 async function loadServices() {
   try {
-    const response = await fetch('/php/services.php?action=list', { 
+    const response = await fetch('php/services.php?action=list', { 
       cache: 'no-store' 
     });
     const result = await response.json();
@@ -443,7 +443,7 @@ async function submitClientForm(e) {
   };
   
   try {
-    const response = await fetch('/php/clients.php', {
+    const response = await fetch('php/clients.php', {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
@@ -471,7 +471,7 @@ async function deleteClient(clientId) {
   if (!confirm('Are you sure you want to delete this client?')) return;
   
   try {
-    const response = await fetch('/php/clients.php', {
+    const response = await fetch('php/clients.php', {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
@@ -531,7 +531,7 @@ async function submitStaffForm(e) {
   };
   
   try {
-    const response = await fetch('/php/staff.php', {
+    const response = await fetch('php/staff.php', {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
@@ -558,7 +558,7 @@ async function deleteStaff(staffId) {
   if (!confirm('Are you sure you want to delete this staff member?')) return;
   
   try {
-    const response = await fetch('/php/staff.php', {
+    const response = await fetch('php/staff.php', {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
@@ -619,7 +619,7 @@ async function submitServiceForm(e) {
   };
   
   try {
-    const response = await fetch('/php/services.php', {
+    const response = await fetch('php/services.php', {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
@@ -646,7 +646,7 @@ async function deleteService(serviceId) {
   if (!confirm('Are you sure you want to delete this service?')) return;
   
   try {
-    const response = await fetch('/php/services.php', {
+    const response = await fetch('php/services.php', {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
@@ -896,7 +896,7 @@ async function submitAppointmentForm(e) {
   };
   
   try {
-    const response = await fetch('/php/appointments.php', {
+    const response = await fetch('php/appointments.php', {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
@@ -938,7 +938,7 @@ async function deleteAppointment(appointmentId) {
   if (!confirm('Are you sure you want to delete this appointment?')) return;
   
   try {
-    const response = await fetch('/php/appointments.php', {
+    const response = await fetch('php/appointments.php', {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
@@ -1004,12 +1004,12 @@ function showAlert(message, type = 'info') {
 // ===== INCOME/FINANCES FUNCTIONS =====
 
 /**
- * FETCH: Load all income records from /php/incomes.php
+ * FETCH: Load all income records from php/incomes.php
  * Uses cache: 'no-store' to bypass browser caching
  */
 async function loadIncomes() {
   try {
-    const response = await fetch('/php/incomes.php?action=list', { 
+    const response = await fetch('php/incomes.php?action=list', { 
       cache: 'no-store' 
     });
     const result = await response.json();
@@ -1029,12 +1029,12 @@ async function loadIncomes() {
 }
 
 /**
- * FETCH: Get income summary data from /php/incomes.php?action=getSummary
+ * FETCH: Get income summary data from php/incomes.php?action=getSummary
  * Updates the summary cards with totals
  */
 async function getIncomeSummary() {
   try {
-    const response = await fetch('/php/incomes.php?action=getSummary', { 
+    const response = await fetch('php/incomes.php?action=getSummary', { 
       cache: 'no-store' 
     });
     const result = await response.json();
@@ -1111,7 +1111,7 @@ async function filterIncomes() {
   if (paymentMethod) params.append('paymentMethod', paymentMethod);
   
   try {
-    const response = await fetch(`/php/incomes.php?${params.toString()}`, { 
+    const response = await fetch(`php/incomes.php?${params.toString()}`, { 
       cache: 'no-store' 
     });
     const result = await response.json();
@@ -1232,7 +1232,7 @@ async function submitIncomeForm(e) {
   const notes = document.getElementById('incomeNotes').value;
   
   try {
-    const response = await fetch('/php/incomes.php', {
+    const response = await fetch('php/incomes.php', {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
@@ -1273,7 +1273,7 @@ async function deleteIncome(incomeId) {
   
   try {
     // First, update the appointment status back to pending
-    const aptResponse = await fetch('/php/appointments.php', {
+    const aptResponse = await fetch('php/appointments.php', {
       method: 'POST',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
