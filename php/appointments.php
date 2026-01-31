@@ -41,6 +41,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (!$request) {
     $request = $_POST;
   }
+  // Extract action from request if it exists
+  if (isset($request['action'])) {
+    $action = $request['action'];
+  }
 }
 
 // Route to appropriate action
@@ -107,13 +111,23 @@ function listAppointments() {
 function addAppointment($request) {
   global $appointmentsFile, $clientsFile, $staffFile, $servicesFile;
   
-  // Validate required fields
-  if (!isset($request['data']['clientId']) || !isset($request['data']['staffId']) || 
-      !isset($request['data']['serviceId']) || !isset($request['data']['date']) || 
-      !isset($request['data']['time'])) {
+  // Validate request structure
+  if (!isset($request['data'])) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Missing required fields']);
+    echo json_encode(['success' => false, 'error' => 'Invalid request format']);
+    error_log('Appointment add error: Request data missing. Received: ' . json_encode($request));
     return;
+  }
+  
+  // Check each required field individually with specific error messages
+  $requiredFields = ['clientId', 'staffId', 'serviceId', 'date', 'time'];
+  foreach ($requiredFields as $field) {
+    if (!isset($request['data'][$field]) || empty($request['data'][$field])) {
+      http_response_code(400);
+      echo json_encode(['success' => false, 'error' => ucfirst(str_replace('Id', '', $field)) . ' is required']);
+      error_log("Appointment add error: Missing {$field}");
+      return;
+    }
   }
   
   // Validate and sanitize input
@@ -128,6 +142,7 @@ function addAppointment($request) {
   if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Invalid date format. Use YYYY-MM-DD']);
+    error_log("Appointment add error: Invalid date format: {$date}");
     return;
   }
   
@@ -135,6 +150,15 @@ function addAppointment($request) {
   if (!preg_match('/^\d{2}:\d{2}$/', $time)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Invalid time format. Use HH:MM']);
+    error_log("Appointment add error: Invalid time format: {$time}");
+    return;
+  }
+  
+  // Validate IDs are positive integers
+  if ($clientId <= 0 || $staffId <= 0 || $serviceId <= 0) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Invalid client, staff, or service ID']);
+    error_log("Appointment add error: Invalid IDs - clientId: {$clientId}, staffId: {$staffId}, serviceId: {$serviceId}");
     return;
   }
   
@@ -198,13 +222,24 @@ function addAppointment($request) {
 function editAppointment($request) {
   global $appointmentsFile, $clientsFile, $staffFile, $servicesFile;
   
-  // Validate required fields
-  if (!isset($request['data']['id']) || !isset($request['data']['clientId']) || !isset($request['data']['staffId']) || 
-      !isset($request['data']['serviceId']) || !isset($request['data']['date']) || 
-      !isset($request['data']['time'])) {
+  // Validate request structure
+  if (!isset($request['data'])) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Missing required fields']);
+    echo json_encode(['success' => false, 'error' => 'Invalid request format']);
+    error_log('Appointment edit error: Request data missing. Received: ' . json_encode($request));
     return;
+  }
+  
+  // Check each required field individually with specific error messages
+  $requiredFields = ['id', 'clientId', 'staffId', 'serviceId', 'date', 'time'];
+  foreach ($requiredFields as $field) {
+    if (!isset($request['data'][$field]) || empty($request['data'][$field])) {
+      http_response_code(400);
+      $errorField = $field === 'id' ? 'Appointment ID' : ucfirst(str_replace('Id', '', $field));
+      echo json_encode(['success' => false, 'error' => $errorField . ' is required']);
+      error_log("Appointment edit error: Missing {$field}");
+      return;
+    }
   }
   
   // Validate and sanitize input
@@ -216,10 +251,19 @@ function editAppointment($request) {
   $time = sanitizeInput($request['data']['time']);
   $status = sanitizeInput($request['data']['status'] ?? 'pending');
   
+  // Validate appointment ID
+  if ($appointmentId <= 0) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Invalid appointment ID']);
+    error_log("Appointment edit error: Invalid appointment ID: {$appointmentId}");
+    return;
+  }
+  
   // Validate date format
   if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Invalid date format. Use YYYY-MM-DD']);
+    error_log("Appointment edit error: Invalid date format: {$date}");
     return;
   }
   
@@ -227,6 +271,15 @@ function editAppointment($request) {
   if (!preg_match('/^\d{2}:\d{2}$/', $time)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Invalid time format. Use HH:MM']);
+    error_log("Appointment edit error: Invalid time format: {$time}");
+    return;
+  }
+  
+  // Validate IDs are positive integers
+  if ($clientId <= 0 || $staffId <= 0 || $serviceId <= 0) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Invalid client, staff, or service ID']);
+    error_log("Appointment edit error: Invalid IDs - clientId: {$clientId}, staffId: {$staffId}, serviceId: {$serviceId}");
     return;
   }
   
