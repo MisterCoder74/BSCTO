@@ -30,21 +30,37 @@ if (!file_exists($appointmentsFile)) {
   file_put_contents($appointmentsFile, json_encode([]));
 }
 
-// Get the action parameter
-$action = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : null);
-
-// Handle GET/POST request body
+// Get action from multiple sources (priority: JSON body > GET > POST form data)
 $request = null;
+$action = null;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  // Try to get JSON body first
   $input = file_get_contents('php://input');
   $request = json_decode($input, true);
-  if (!$request) {
-    $request = $_POST;
-  }
-  // Extract action from request if it exists
-  if (isset($request['action'])) {
+  
+  if ($request && isset($request['action'])) {
     $action = $request['action'];
+  } else {
+    // Fallback to form data
+    $request = $_POST;
+    if (isset($_POST['action'])) {
+      $action = $_POST['action'];
+    }
   }
+}
+
+// Also check GET parameter
+if (!$action && isset($_GET['action'])) {
+  $action = $_GET['action'];
+}
+
+// If still no action, log and return error
+if (!$action) {
+  http_response_code(400);
+  echo json_encode(['success' => false, 'error' => 'Action parameter is required']);
+  error_log('No action parameter provided. REQUEST_METHOD: ' . $_SERVER['REQUEST_METHOD'] . ' | POST: ' . json_encode($_POST) . ' | REQUEST: ' . json_encode($request));
+  exit;
 }
 
 // Route to appropriate action
@@ -299,8 +315,10 @@ function editAppointment($request) {
     
     // Find and update appointment
     $found = false;
+    $oldStatus = null;
     foreach ($appointments as &$apt) {
       if ($apt['id'] === $appointmentId) {
+        $oldStatus = $apt['status'];
         $apt['clientId'] = $clientId;
         $apt['staffId'] = $staffId;
         $apt['serviceId'] = $serviceId;
@@ -311,6 +329,7 @@ function editAppointment($request) {
         break;
       }
     }
+    unset($apt);
     
     if (!$found) {
       flock($handle, LOCK_UN);
@@ -329,17 +348,15 @@ function editAppointment($request) {
     
     // Return updated appointment
     $updatedAppointment = null;
-    foreach ($appointments as $apt) {
-      if ($apt['id'] === $appointmentId) {
-        $updatedAppointment = $apt;
+    foreach ($appointments as $item) {
+      if ($item['id'] === $appointmentId) {
+        $updatedAppointment = $item;
         break;
       }
     }
 
     // Validate appointment was properly loaded
     if (!$updatedAppointment) {
-      flock($handle, LOCK_UN);
-      fclose($handle);
       http_response_code(500);
       echo json_encode([
         'success' => false,
@@ -347,6 +364,19 @@ function editAppointment($request) {
         'error' => 'Failed to load updated appointment'
       ]);
       return;
+    }
+
+    // Handle income record creation/deletion based on status change
+    $incomeCreated = false;
+    $incomeDeleted = false;
+    
+    if ($status === 'complete' && $oldStatus !== 'complete') {
+      createIncomeFromAppointment($updatedAppointment);
+      $incomeCreated = true;
+    }
+    else if ($oldStatus === 'complete' && $status !== 'complete') {
+      deleteIncomeByAppointmentId($appointmentId);
+      $incomeDeleted = true;
     }
 
     // Validate required appointment fields before sending email
@@ -362,6 +392,8 @@ function editAppointment($request) {
     echo json_encode([
       'success' => true,
       'data' => $updatedAppointment,
+      'incomeCreated' => $incomeCreated,
+      'incomeDeleted' => $incomeDeleted,
       'error' => null
     ]);
   } catch (Exception $e) {
@@ -491,16 +523,15 @@ function updateAppointmentStatus($request) {
     // Find appointment and get old status
     $found = false;
     $oldStatus = null;
-    $appointmentData = null;
     foreach ($appointments as &$apt) {
       if ($apt['id'] === $appointmentId) {
         $oldStatus = $apt['status'];
-        $appointmentData = $apt;
         $apt['status'] = $newStatus;
         $found = true;
         break;
       }
     }
+    unset($apt);
     
     if (!$found) {
       flock($handle, LOCK_UN);
@@ -517,32 +548,17 @@ function updateAppointmentStatus($request) {
     flock($handle, LOCK_UN);
     fclose($handle);
     
-    // Handle income record creation/deletion based on status change
-    $incomeRecord = null;
-    $incomeDeleted = false;
-    
-    // Status changed TO 'complete' - create income record
-    if ($newStatus === 'complete' && $oldStatus !== 'complete') {
-      $incomeRecord = createIncomeFromAppointment($appointmentData);
-    }
-    // Status changed FROM 'complete' - delete income record
-    else if ($oldStatus === 'complete' && $newStatus !== 'complete') {
-      $incomeDeleted = deleteIncomeByAppointmentId($appointmentId);
-    }
-    
     // Return updated appointment
     $updatedAppointment = null;
-    foreach ($appointments as $apt) {
-      if ($apt['id'] === $appointmentId) {
-        $updatedAppointment = $apt;
+    foreach ($appointments as $item) {
+      if ($item['id'] === $appointmentId) {
+        $updatedAppointment = $item;
         break;
       }
     }
     
     // Validate appointment was properly loaded
     if (!$updatedAppointment) {
-      flock($handle, LOCK_UN);
-      fclose($handle);
       http_response_code(500);
       echo json_encode([
         'success' => false,
@@ -550,6 +566,19 @@ function updateAppointmentStatus($request) {
         'error' => 'Failed to load updated appointment'
       ]);
       return;
+    }
+    
+    // Handle income record creation/deletion based on status change
+    $incomeRecord = null;
+    $incomeDeleted = false;
+    
+    // Status changed TO 'complete' - create income record
+    if ($newStatus === 'complete' && $oldStatus !== 'complete') {
+      $incomeRecord = createIncomeFromAppointment($updatedAppointment);
+    }
+    // Status changed FROM 'complete' - delete income record
+    else if ($oldStatus === 'complete' && $newStatus !== 'complete') {
+      $incomeDeleted = deleteIncomeByAppointmentId($appointmentId);
     }
     
     // Validate required appointment fields before sending email
